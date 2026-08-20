@@ -1,0 +1,62 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      // Роль ТОЛЬКО из custom claim (request.auth.token.admin), а не из поля в документе —
+      // поле в users/{uid}.role может редактировать сам пользователь, если не закрыть write ниже.
+      return isSignedIn() && request.auth.token.admin == true;
+    }
+
+    // --- users/{userId} ---
+    // Читает только сам пользователь (свой профиль) или админ.
+    // Пишет только сервер (Admin SDK из /api/*, который security rules не проверяют)
+    // или админ из консоли — обычный клиент никогда не пишет bestScore/totalAttempts напрямую,
+    // иначе можно самому себе нарисовать рекорд.
+    match /users/{userId} {
+      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow write: if isAdmin();
+    }
+
+    // --- questions/{questionId} ---
+    // Студент НИКОГДА не читает эту коллекцию напрямую (там лежит correctAnswer/explanation).
+    // Вопросы для прохождения теста студент получает через /api/attempts/[id]/questions,
+    // который использует Admin SDK и вырезает correctAnswer перед отдачей.
+    match /questions/{questionId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // --- customTests/{testId} ---
+    // Список опубликованных тестов можно показывать всем залогиненным студентам
+    // (title/id — не секрет), но questionIds внутри не содержат ответов, поэтому это безопасно.
+    // Черновики (isPublished == false) видит только админ.
+    match /customTests/{testId} {
+      allow read: if isAdmin() || (isSignedIn() && resource.data.isPublished == true);
+      allow write: if isAdmin();
+    }
+
+    // --- entAttempts/{attemptId} ---
+    // Создание попытки и submit идут ТОЛЬКО через /api/* (Admin SDK), потому что там
+    // сервер выставляет startedAt/expiresAt и считает result — это нельзя доверять клиенту.
+    // Прямая запись с клиента разрешена ТОЛЬКО для автосохранения ответов (answers) в рамках
+    // уже существующей своей попытки со статусом in_progress — ничего больше менять нельзя.
+    match /entAttempts/{attemptId} {
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+
+      allow create: if isAdmin(); // клиент создаёт попытку через /api/attempts (Admin SDK)
+
+      allow update: if isSignedIn()
+        && resource.data.userId == request.auth.uid
+        && resource.data.status == 'in_progress'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['answers']);
+
+      allow delete: if isAdmin();
+    }
+  }
+}

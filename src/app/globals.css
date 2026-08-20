@@ -1,0 +1,46 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+@theme {
+  --font-family: "Inter", sans-serif;
+}
+
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn .5s ease;
+}
+@import "tailwindcss";
+
+/* Өз қаріптеріңіз бен баптауларыңыз */
+html, body {
+  font-family: "Inter", sans-serif;
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+  /* background-color:#F1F2F4; */
+}
+
+h1, h2, h3 {
+  font-family: "Inter", sans-serif;
+}
+
+/* Өз контейнеріңіз */
+.container {
+  max-width: 1300px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
