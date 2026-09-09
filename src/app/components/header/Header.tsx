@@ -7,7 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { user, loading, logout } = useAuth();
+  const { user, loading, isAdmin, logout } = useAuth();
   const router = useRouter();
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
@@ -74,6 +74,14 @@ export default function Header() {
                   <li>
                     <Link href="/profile" className={navLinkClass} onClick={handleProfileClick}>
                       Профиль
+                    </Link>
+                  </li>
+                )}
+
+                {isAdmin && (
+                  <li>
+                    <Link href="/admin" className={navLinkClass} onClick={closeMenu}>
+                      Админ-панель
                     </Link>
                   </li>
                 )}
